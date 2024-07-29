@@ -1,7 +1,4 @@
-import { useLocalStorage } from "usehooks-ts";
-import { nanoid } from "nanoid";
 import { getDateInputValue } from "@/modules/shared/utils/date-input";
-import { useMemo } from "react";
 import { db } from "@/db";
 import { AllowancesTable, SelectAllowances } from "@/db/schema";
 import { createAllowance } from "../modules/allowance/actions/create-allowance";
@@ -19,14 +16,6 @@ const diffFormat = new Intl.NumberFormat("es", {
 const dateFormat = new Intl.DateTimeFormat("es", { dateStyle: "medium" });
 
 const currentDate = getDateInputValue(new Date());
-
-interface Allowance {
-  id: string;
-  date: string;
-  amount: number;
-  diff: number;
-  isCalculated?: boolean;
-}
 
 function calculateAllowances(allowances: SelectAllowances[]) {
   const lastAllowance = allowances?.at?.(-1);
