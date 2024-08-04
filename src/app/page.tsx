@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { AllowancesTable, SelectAllowances } from "@/db/schema";
 import { createAllowance } from "../modules/allowance/actions/create-allowance";
 import { PayAllowanceButton } from "../modules/allowance/components/pay-allowance-button";
+import { withPageAuthRequired } from "@auth0/nextjs-auth0";
 
 const priceFormat = new Intl.NumberFormat("es", {
   style: "currency",
@@ -44,7 +45,7 @@ function calculateAllowances(allowances: SelectAllowances[]) {
     });
 }
 
-export default async function Home() {
+async function Home() {
   const allowances = await db.select().from(AllowancesTable);
   const totalPayed =
     allowances.reduce((total, { diff }) => total + parseFloat(diff), 0) ?? 0;
@@ -158,3 +159,5 @@ export default async function Home() {
     </div>
   );
 }
+
+export default withPageAuthRequired(Home, { returnTo: "/" });
