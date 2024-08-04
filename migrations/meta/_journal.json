@@ -8,6 +8,13 @@
       "when": 1722271972328,
       "tag": "0000_solid_old_lace",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1722732378552,
+      "tag": "0001_right_barracuda",
+      "breakpoints": true
     }
   ]
 }

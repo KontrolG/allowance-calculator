@@ -1,9 +1,11 @@
 import { getDateInputValue } from "@/modules/shared/utils/date-input";
 import { db } from "@/db";
-import { AllowancesTable, SelectAllowances } from "@/db/schema";
+import { AllowancesTable, ConfigsTable, SelectAllowances } from "@/db/schema";
 import { createAllowance } from "../modules/allowance/actions/create-allowance";
 import { PayAllowanceButton } from "../modules/allowance/components/pay-allowance-button";
 import { withPageAuthRequired } from "@auth0/nextjs-auth0";
+import { eq } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
 
 const priceFormat = new Intl.NumberFormat("es", {
   style: "currency",
@@ -18,7 +20,7 @@ const dateFormat = new Intl.DateTimeFormat("es", { dateStyle: "medium" });
 
 const currentDate = getDateInputValue(new Date());
 
-function calculateAllowances(allowances: SelectAllowances[]) {
+function calculateAllowances(allowances: SelectAllowances[], percentage = 0.2) {
   const lastAllowance = allowances?.at?.(-1);
   if (!lastAllowance) return [];
 
@@ -30,7 +32,7 @@ function calculateAllowances(allowances: SelectAllowances[]) {
       const date = new Date(lastAllowance?.date);
       date.setDate(1);
       date.setMonth(date.getMonth() + (index + 1));
-      const amount = lastAllowanceAmount + lastAllowanceAmount * 0.2;
+      const amount = lastAllowanceAmount + lastAllowanceAmount * percentage;
       const diff = amount - lastAllowanceAmount;
       lastAllowanceAmount = amount;
 
@@ -47,9 +49,17 @@ function calculateAllowances(allowances: SelectAllowances[]) {
 
 async function Home() {
   const allowances = await db.select().from(AllowancesTable);
+  const [{ percentage }] = await db
+    .select({ percentage: ConfigsTable.value })
+    .from(ConfigsTable)
+    .where(eq(ConfigsTable.key, "PERCENTAGE"))
+    .limit(1);
   const totalPayed =
     allowances.reduce((total, { diff }) => total + parseFloat(diff), 0) ?? 0;
-  const calculatedAllowances = calculateAllowances(allowances);
+  const calculatedAllowances = calculateAllowances(
+    allowances,
+    parseFloat(percentage) / 100
+  );
 
   async function onSubmitAllowance(formData: FormData) {
     "use server";
@@ -64,9 +74,59 @@ async function Home() {
     await createAllowance(data);
   }
 
+  async function onSubmitPercentage(formData: FormData) {
+    "use server";
+
+    const newPercentage = formData.get("percentage")?.toString?.();
+
+    await db
+      .update(ConfigsTable)
+      .set({
+        value: newPercentage,
+      })
+      .where(eq(ConfigsTable.key, "PERCENTAGE"));
+
+    revalidatePath("/");
+  }
+
   return (
     <div className="space-y-8">
       <h1 className="text-5xl">Calculador de mesada</h1>
+      <form action={onSubmitPercentage}>
+        <fieldset>
+          <label className="form-control w-full">
+            <div className="label">
+              <span className="label-text">Porcentaje mensual</span>
+            </div>
+            <div className="join">
+              <label className="input join-item input-bordered flex items-center gap-2 grow">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                  className="size-6"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="m9 14.25 6-6m4.5-3.493V21.75l-3.75-1.5-3.75 1.5-3.75-1.5-3.75 1.5V4.757c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0c1.1.128 1.907 1.077 1.907 2.185ZM9.75 9h.008v.008H9.75V9Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm4.125 4.5h.008v.008h-.008V13.5Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"
+                  />
+                </svg>
+                <input
+                  type="number"
+                  className="grow"
+                  placeholder="Email"
+                  name="percentage"
+                  defaultValue={percentage}
+                />
+              </label>
+              <button className="btn btn-primary join-item">Guardar</button>
+            </div>
+          </label>
+        </fieldset>
+      </form>
       <table className="table">
         <thead>
           <tr>

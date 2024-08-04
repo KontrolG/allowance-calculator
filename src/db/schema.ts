@@ -4,6 +4,7 @@ import {
   numeric,
   pgTable,
   serial,
+  text,
   timestamp,
 } from "drizzle-orm/pg-core";
 
@@ -18,3 +19,13 @@ export const AllowancesTable = pgTable("allowances", {
 
 export type SelectAllowances = typeof AllowancesTable.$inferSelect;
 export type InsertAllowances = typeof AllowancesTable.$inferInsert;
+
+export const ConfigsTable = pgTable("configs", {
+  id: serial("id").primaryKey(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  key: text("key").notNull().unique(),
+  value: text("value").notNull(),
+});
+
+export type SelectConfigs = typeof ConfigsTable.$inferSelect;
+export type InsertConfigs = typeof ConfigsTable.$inferInsert;
